@@ -87,7 +87,7 @@ func (c *Client) CountByte(bucket []byte, n interface{}) {
 	if c.skip() {
 		return
 	}
-
+	c.conn.metricByte(c.prefix, bucket, n, "c", c.rate, c.tags)
 }
 
 func (c *Client) skip() bool {
