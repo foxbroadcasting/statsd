@@ -83,6 +83,13 @@ func (c *Client) Count(bucket string, n interface{}) {
 	c.conn.metric(c.prefix, bucket, n, "c", c.rate, c.tags)
 }
 
+func (c *Client) CountByte(bucket []byte, n interface{}) {
+	if c.skip() {
+		return
+	}
+
+}
+
 func (c *Client) skip() bool {
 	return c.muted || (c.rate != 1 && randFloat() > c.rate)
 }

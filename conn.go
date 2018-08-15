@@ -93,6 +93,18 @@ func (c *conn) metric(prefix, bucket string, n interface{}, typ string, rate flo
 	c.mu.Unlock()
 }
 
+func (c *conn) metricByte(prefix string, bucket []byte, n interface{}, typ string, rate float32, tags string) {
+	c.mu.Lock()
+	l := len(c.buf)
+	c.appendBucketByte(prefix, bucket, tags)
+	c.appendNumber(n)
+	c.appendType(typ)
+	c.appendRate(rate)
+	c.closeMetric(tags)
+	c.flushIfBufferFull(l)
+	c.mu.Unlock()
+}
+
 func (c *conn) gauge(prefix, bucket string, value interface{}, tags string) {
 	c.mu.Lock()
 	l := len(c.buf)
@@ -127,6 +139,10 @@ func (c *conn) unique(prefix, bucket string, value string, tags string) {
 
 func (c *conn) appendByte(b byte) {
 	c.buf = append(c.buf, b)
+}
+
+func (c *conn) appendByteSlice(b []byte) {
+	c.buf = append(c.buf, b...)
 }
 
 func (c *conn) appendString(s string) {
@@ -195,6 +211,15 @@ func isNegative(v interface{}) bool {
 func (c *conn) appendBucket(prefix, bucket string, tags string) {
 	c.appendString(prefix)
 	c.appendString(bucket)
+	if c.tagFormat == InfluxDB {
+		c.appendString(tags)
+	}
+	c.appendByte(':')
+}
+
+func (c *conn) appendBucketByte(prefix string, bucket []byte, tags string) {
+	c.appendString(prefix)
+	c.appendByteSlice(bucket)
 	if c.tagFormat == InfluxDB {
 		c.appendString(tags)
 	}
