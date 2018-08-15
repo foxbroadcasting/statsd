@@ -24,6 +24,12 @@ func TestCount(t *testing.T) {
 	})
 }
 
+func TestCountByte(t *testing.T) {
+	testOutput(t, "test_key:5|c", func(c *Client) {
+		c.CountByte([]byte(testKey), 5)
+	})
+}
+
 func TestIncrement(t *testing.T) {
 	testOutput(t, "test_key:1|c", func(c *Client) {
 		c.Increment(testKey)
@@ -37,9 +43,22 @@ func TestGauge(t *testing.T) {
 	})
 }
 
+func TestGaugeByte(t *testing.T) {
+	testOutput(t, "test_key:5|g\ntest_key:0|g\ntest_key:-10|g", func(c *Client) {
+		c.GaugeByte([]byte(testKey), 5)
+		c.GaugeByte([]byte(testKey), -10)
+	})
+}
+
 func TestTiming(t *testing.T) {
 	testOutput(t, "test_key:6|ms", func(c *Client) {
 		c.Timing(testKey, 6)
+	})
+}
+
+func TestTimingByte(t *testing.T) {
+	testOutput(t, "test_key:6|ms", func(c *Client) {
+		c.TimingByte([]byte(testKey), 6)
 	})
 }
 
@@ -364,10 +383,10 @@ func TestUDPNotListening(t *testing.T) {
 	defer func() { dialTimeout = net.DialTimeout }()
 
 	c, err := New()
-	if c == nil || !c.muted {
+	if c == nil || c.muted {
 		t.Error("New() did not return a muted client")
 	}
-	if err == nil {
+	if err != nil {
 		t.Error("New should return an error")
 	}
 }
@@ -576,13 +595,28 @@ func Benchmark(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		c.Increment(testKey)
+		//c.Increment(testKey)
 		c.Count(testKey, i)
 		c.Gauge(testKey, i)
 		c.Timing(testKey, i)
-		c.NewTiming().Send(testKey)
+		//c.NewTiming().Send(testKey)
 	}
 	c.Close()
 	serv.Close()
+}
+
+func BenchmarkBytes(b *testing.B) {
+	serv := newServer(b, "udp", testAddr, func([]byte) {})
+	c, err := New(Address(serv.addr), FlushPeriod(0))
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		c.CountByte([]byte(testKey), i)
+		c.GaugeByte([]byte(testKey), i)
+		c.TimingByte([]byte(testKey), i)
+	}
 }

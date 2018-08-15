@@ -107,12 +107,26 @@ func (c *Client) Gauge(bucket string, value interface{}) {
 	c.conn.gauge(c.prefix, bucket, value, c.tags)
 }
 
+func (c *Client) GaugeByte(bucket []byte, value interface{}) {
+	if c.skip() {
+		return
+	}
+	c.conn.gaugeByte(c.prefix, bucket, value, c.tags)
+}
+
 // Timing sends a timing value to a bucket.
 func (c *Client) Timing(bucket string, value interface{}) {
 	if c.skip() {
 		return
 	}
 	c.conn.metric(c.prefix, bucket, value, "ms", c.rate, c.tags)
+}
+
+func (c *Client) TimingByte(bucket []byte, value interface{}) {
+	if c.skip() {
+		return
+	}
+	c.conn.metricByte(c.prefix, bucket, value, "ms", c.rate, c.tags)
 }
 
 // Histogram sends an histogram value to a bucket.

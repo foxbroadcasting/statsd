@@ -47,16 +47,18 @@ func newConn(conf connConfig, muted bool) (*conn, error) {
 	}
 	// When using UDP do a quick check to see if something is listening on the
 	// given port to return an error as soon as possible.
-	if c.network[:3] == "udp" {
-		for i := 0; i < 2; i++ {
-			_, err = c.w.Write(nil)
-			if err != nil {
-				_ = c.w.Close()
-				c.w = nil
-				return c, err
+	/*
+		if c.network[:3] == "udp" {
+			for i := 0; i < 2; i++ {
+				_, err = c.w.Write(nil)
+				if err != nil {
+					_ = c.w.Close()
+					c.w = nil
+					return c, err
+				}
 			}
 		}
-	}
+	*/
 
 	// To prevent a buffer overflow add some capacity to the buffer to allow for
 	// an additional metric.
@@ -115,6 +117,21 @@ func (c *conn) gauge(prefix, bucket string, value interface{}, tags string) {
 		c.appendGauge(0, tags)
 	}
 	c.appendBucket(prefix, bucket, tags)
+	c.appendGauge(value, tags)
+	c.flushIfBufferFull(l)
+	c.mu.Unlock()
+}
+
+func (c *conn) gaugeByte(prefix string, bucket []byte, value interface{}, tags string) {
+	c.mu.Lock()
+	l := len(c.buf)
+	// To set a gauge to a negative value we must first set it to 0.
+	// https://github.com/etsy/statsd/blob/master/docs/metric_types.md#gauges
+	if isNegative(value) {
+		c.appendBucketByte(prefix, bucket, tags)
+		c.appendGauge(0, tags)
+	}
+	c.appendBucketByte(prefix, bucket, tags)
 	c.appendGauge(value, tags)
 	c.flushIfBufferFull(l)
 	c.mu.Unlock()
